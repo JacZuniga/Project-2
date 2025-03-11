@@ -1,52 +1,32 @@
-import os 
-import scipy
-import seaborn as sns
-import joypy
 import pandas as pd
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 import statsmodels.api as sm
-from scipy.stats import chi2_contingency, ttest_ind
-# Opening file
-file_name = "vgchartz.csv"
-vgchartz_df = pd.read_csv(file_name)
-print(vgchartz_df.head())
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-file_name2 = "Video Games Sales.csv"
-gs_df = pd.read_csv(file_name2)
-print(gs_df.head())
+# Load the dataset
+data = pd.read_csv('Video Games Sales.csv')
 
-# Chi-Square Test: Creating a contingency table
-contingency_table = pd.crosstab(vgchartz_df["platform"], vgchartz_df["shipped"].notna())  
-chi2_stat, p_chi2, dof, expected = chi2_contingency(contingency_table)
+# One-hot encode the 'Platform' column
+data_encoded = pd.get_dummies(data, columns=['Platform'], drop_first=True)
 
-print(f"Chi-Square Statistic: {chi2_stat}, p-value: {p_chi2}")
+# Define the independent variables (X) and dependent variable (y)
+X = data_encoded.drop(columns=['Global', 'Game Title', 'Year', 'Genre', 'Publisher', 'North America', 'Europe', 'Japan', 'Rest of World', 'Review'])
+y = data_encoded['Global']
 
-# T-Test: Comparing shipments between PC and NS
-pc_shipments = vgchartz_df[vgchartz_df["platform"] == "PC"]["shipped"].dropna()
-ns_shipments = vgchartz_df[vgchartz_df["platform"] == "NS"]["shipped"].dropna()
+# Add a constant to the independent variables (for the intercept term)
+X = sm.add_constant(X)
 
-t_stat, p_ttest = ttest_ind(pc_shipments, ns_shipments, equal_var=False)  # Welch's t-test
-print(f"T-Test Statistic: {t_stat}, p-value: {p_ttest}")
+# Fit the linear regression model
+model = sm.OLS(y, X).fit()
 
-# Set style
-sns.set_style("whitegrid")
+# Print the regression summary
+print(model.summary())
 
-# Bar Chart: Total Shipments by Platform
+# Visualize the relationship between platform and global sales
 plt.figure(figsize=(12, 6))
-platform_shipment_totals = vgchartz_df.groupby("platform")["shipped"].sum().dropna().sort_values(ascending=False)
-sns.barplot(x=platform_shipment_totals.index, y=platform_shipment_totals.values, palette="viridis")
-plt.xticks(rotation=90)
-plt.xlabel("Platform")
-plt.ylabel("Total Shipments (in millions)")
-plt.title("Total Game Shipments by Platform")
-plt.show()
-
-# Box Plot: Distribution of Shipments for PC vs. NS
-plt.figure(figsize=(8, 6))
-sns.boxplot(data=vgchartz_df[vgchartz_df["platform"].isin(["PC", "NS"])], x="platform", y="shipped", palette="pastel")
-plt.xlabel("Platform")
-plt.ylabel("Shipments (in millions)")
-plt.title("Comparison of Shipments: PC vs. NS")
+sns.boxplot(x='Platform', y='Global', data=data, palette='viridis')
+plt.title('Global Sales by Platform')
+plt.xlabel('Platform')
+plt.ylabel('Global Sales (in millions)')
+plt.xticks(rotation=45)
 plt.show()
