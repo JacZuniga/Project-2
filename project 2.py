@@ -1,45 +1,47 @@
 import pandas as pd
-from scipy.stats import f_oneway
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import f_oneway
 
-# Load the dataset
-data = pd.read_csv('Video Games Sales.csv')
+# Load the data
+df = pd.read_csv('vgchartz.csv')
 
-# Group the data by Platform and calculate the sum of Global sales for each platform
-platform_sales = data.groupby('Platform')['Global'].sum().reset_index()
+# Clean the data: Remove rows where 'shipped' is NaN
+df = df.dropna(subset=['shipped'])
 
-# Perform ANOVA test
-platforms = data['Platform'].unique()
-grouped_data = [data[data['Platform'] == platform]['Global'] for platform in platforms]
+# Group by platform and calculate the mean number of copies shipped
+platform_shipped = df.groupby('platform')['shipped'].mean().sort_values(ascending=False)
 
-# Perform ANOVA test
-f_statistic, p_value = f_oneway(*grouped_data)
-
-# Output the results
-print(f"F-Statistic: {f_statistic}")
-print(f"P-Value: {p_value}")
-
-# Interpret the results
-if p_value < 0.05:
-    print("There is a significant correlation between platform and number of copies shipped.")
-else:
-    print("There is no significant correlation between platform and number of copies shipped.")
-
-# 1. Bar Plot: Total Global Sales by Platform
+# Visualize the data
 plt.figure(figsize=(12, 6))
-sns.barplot(x='Platform', y='Global', data=platform_sales, palette='viridis')
-plt.title('Total Global Sales by Platform')
+sns.barplot(x=platform_shipped.index, y=platform_shipped.values)
+plt.title('Average Number of Copies Shipped by Platform')
 plt.xlabel('Platform')
-plt.ylabel('Total Global Sales (in millions)')
+plt.ylabel('Average Copies Shipped (Millions)')
 plt.xticks(rotation=45)
 plt.show()
 
-# 2. Box Plot: Distribution of Global Sales by Platform
-plt.figure(figsize=(12, 6))
-sns.boxplot(x='Platform', y='Global', data=data, palette='viridis')
-plt.title('Distribution of Global Sales by Platform')
+# Perform ANOVA test to check for significant differences between platforms
+platforms = df['platform'].unique()
+grouped_data = [df[df['platform'] == platform]['shipped'] for platform in platforms]
+
+f_statistic, p_value = f_oneway(*grouped_data)
+
+print(f"F-statistic: {f_statistic}")
+print(f"P-value: {p_value}")
+
+# Interpret the results
+if p_value < 0.05:
+    print("There is a statistically significant difference in the number of copies shipped across platforms.")
+else:
+    print("There is no statistically significant difference in the number of copies shipped across platforms.")
+    
+# Plot a boxplot to visualize the distribution of copies shipped across platforms
+plt.figure(figsize=(14, 6))
+sns.boxplot(x=df['platform'], y=df['shipped'], showfliers=False)  # Exclude outliers for better visualization
+plt.title('Distribution of Copies Shipped by Platform')
 plt.xlabel('Platform')
-plt.ylabel('Global Sales (in millions)')
+plt.ylabel('Copies Shipped (Millions)')
 plt.xticks(rotation=45)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.show()
